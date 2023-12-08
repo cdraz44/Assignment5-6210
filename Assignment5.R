@@ -34,8 +34,8 @@ write(Salm_cytb, "Salm_cytb.fasta", sep = "\n", )
 
 Salm_string <- readDNAStringSet("Salm_cytb.fasta")
 
-class(Salm_string)
-names(Salm_string)
+stats <- function(x) {list(class = class(x), names = if (is.data.frame(x)) names(x) else NULL, summary = if (is.numeric(x)) summary(x) else NULL)}
+
 
 df <- data.frame(Salm_Title = names(Salm_string), Salm_Sequence = paste(Salm_string))
 
@@ -44,14 +44,13 @@ df <- data.frame(Salm_Title = names(Salm_string), Salm_Sequence = paste(Salm_str
 df$Species <- word(df$Salm_Title, 2L, 3L)
 df <- df[, c("Species", "Salm_Sequence")]
 
-dim(df)
-names(df)
+stats(df)
 
 ######Cleaning up data ##########
 
 ##Checking for extremes in my data
 
-summary(nchar(df$Salm_Sequence))
+stats(nchar(df$Salm_Sequence))
 
 ##Removing any sequence with incomplete bases.  I want to have a very clean dataset for this alignment and phylogenetic analysis
 
@@ -109,12 +108,8 @@ sum(is.na(cleaned_Salm))
 
 ##Checking summaries and class of dataframes before moving forward
 
-summary(cleaned_Salm)
-summary(cleaned_species)
-
-class(cleaned_Salm)
-class(cleaned_species)
-
+stats(cleaned_Salm)
+stats(cleaned_species)
 ##Creating my single sequence species data frame into a DNA string set
 
 Salmstringset <- DNAStringSet(cleaned_species$Salm_Sequence)
@@ -168,15 +163,14 @@ Salm_phydat <- as.phyDat(Salm_Bin)
 model_list <- c("JC", "F81", "K80", "HKY", "GTR")
 
 ##Running likelihood analysis, it did not work because it won't recognize any of my trees. I tried for hours and hours and eventually had to give up but I wasted so much time on making this my "novel component" I have left it in.
+
 #THIS WAS THE CODE::::::
-#likelihoods <- sapply(model_list, function(model) { fit <- pml(Salm_Bin, tree, k = 4, model = model)-fit$logLik})
+#likelihoods <- sapply(model_list, function(model) { fit <- pml(Salm_Bin, treeUPGMA, k = 4, model = model)-fit$logLik})
 
 ##This is showing that all my trees are class phylo and I don't know why I kept getting the error "tree must be of class phylo"
 
-class(tree)
-class(treeNJ)
-class(treeUPGMA)
-
+stats(treeNJ)
+stats(treeUPGMA)
 
 ##########CODING PART 2#############
 
@@ -212,6 +206,8 @@ colnames(BOLDdf) <- c("Species", "Latitude", "Longitude")
 dfRightJoin <- cleaned_Salm %>%
   right_join(BOLDdf, by = "Species", relationship = "many-to-many")
 
+stats(dfRightJoin)
+
 ##Fetching a world map to plot over
 
 world <- map_data("world")
@@ -232,9 +228,8 @@ species <- st_as_sf(dfRightJoin, coords = c("Longitude", "Latitude"), crs = 4326
 
 ##Checking class to make sure I have the right type of object
 
-class(species)
-class(canada)
-
+stats(canada)
+stats(species)
 
 ## Joining both sf data frames 
 
