@@ -122,8 +122,7 @@ Salm_phydat <- as.phyDat(Salm_Bin)
 
 model_list <- c("JC", "F81", "K80", "HKY", "GTR")
 
-likelihoods <- sapply(model_list, function(model) { fit <- pml(Salm_Bin, tree, k = 4, model = model)
--fit$logLik})
+##likelihoods <- sapply(model_list, function(model) { fit <- pml(Salm_Bin, tree, k = 4, model = model)-fit$logLik})
 
 class(tree)
 class(treeNJ)
@@ -160,11 +159,10 @@ ggplot() + geom_polygon(data = world, aes(x = long, y= lat, group = group), fill
                         
 canada <- geojson_read("https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson", what = "sp")
 
-class(canada)
-names(canada)
-
 canada <- st_as_sf(canada, crs = 4326)
 species <- st_as_sf(dfRightJoin, coords = c("Longitude", "Latitude"), crs = 4326)
+
+species <- sf::st_cast(species, "MULTIPOLYGONAL")
 
 class(species)
 names(species)
@@ -175,6 +173,8 @@ combined_data <- combined_data %>%
   group_by(name) %>%
   summarize(Species = n())
 
+combined_data <- sf::st_cast(combined_data, "GEOMETRYCOLLECTION") %>%
+  st_collection_extract("POLYGON")
 
 choro_map <- combined_data %>%
   ggplot(aes(fill = Species, text = str_c(name, ": ", Species))) + 
@@ -182,7 +182,8 @@ choro_map <- combined_data %>%
 
 plot(choro_map)
 
-interactive_map <- ggplotly(choro_map)
+
+interactive_map <- ggplotly(choro_map, tooltip = "text")
 
 interactive_map
 
