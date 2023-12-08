@@ -14,7 +14,7 @@ library(phangorn)
 library(msa)
 library(viridisLite)
 library(scico)
-library(igraph)
+
 
 SALMONIDAE_search <- entrez_search(db = "nuccore", term = ("Salmonidae[ORGN] AND CYTB[GENE] AND 1000:1200[SLEN]"), retmax = 1498, use_history = TRUE)
 
@@ -112,7 +112,7 @@ plot(Salm_hclust)
 treeUPGMA = upgma(Salm_Dist)
 treeNJ = NJ(Salm_Dist)
 layout(matrix(c(1,2)))
-par(mar = c(.1,.1,.1,.1), nrow = 1)      
+par(mar = c(.5,.5,.5,.5), nrow = 1)      
 plot(treeUPGMA, main="UPGMA")
 plot(treeNJ, "fan", main="NJ")
 
@@ -133,5 +133,56 @@ class(treeUPGMA)
 
 ###CODING PT 2
 
+library(geojsonio)
+library(sf)
+library(maps)
+library(plotly)
+
+
 Salm_BOLD <- read_tsv("http://boldsystems.org/index.php/API_Public/combined?taxon=Salmonidae&format=tsv")
+
+BOLDdf <- Salm_BOLD[, c("species_name", "lat", "lon")]
+
+BOLDdf <- na.omit(BOLDdf)
+
+sum(is.na(BOLDdf))
+
+colnames(BOLDdf) <- c("Species", "Latitude", "Longitude")
+
+dfRightJoin <- cleaned_Salm %>%
+  right_join(BOLDdf, by = "Species", relationship = "many-to-many")
+
+
+world <- map_data("world")
+
+ggplot() + geom_polygon(data = world, aes(x = long, y= lat, group = group), fill = "white", color = "black") +
+  geom_point(data = dfRightJoin, aes(x = Longitude, y = Latitude, color = Species), size = 2) + scale_color_discrete(name = "Species") + labs(title = "Salmonidae Distribution Map of the World", xlab = "Longitude", ylab = "Latitude") + theme(legend.position = "bottom")
+                        
+canada <- geojson_read("https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson", what = "sp")
+
+class(canada)
+names(canada)
+
+canada <- st_as_sf(canada, crs = 4326)
+species <- st_as_sf(dfRightJoin, coords = c("Longitude", "Latitude"), crs = 4326)
+
+class(species)
+names(species)
+
+combined_data <- st_join(canada, species, join = st_intersects)
+
+combined_data <- combined_data %>%
+  group_by(name) %>%
+  summarize(Species = n())
+
+
+choro_map <- combined_data %>%
+  ggplot(aes(fill = Species, text = str_c(name, ": ", Species))) + 
+  geom_sf() + scale_fill_scico("Salmonidae Occurences", breaks = c(0, 100, 200, 300, 400,500, 1000, 1500, 2000, 2500, 3000, 3500, 4000)) + theme_void() + ggtitle("Species Occurences of Salmonidae spp. Across Canada") + theme(legend.key.size = unit(3, "cm"))
+
+plot(choro_map)
+
+interactive_map <- ggplotly(choro_map)
+
+interactive_map
 
