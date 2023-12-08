@@ -174,8 +174,8 @@ stats(treeUPGMA)
 
 ##########CODING PART 2#############
 
+######Data Acquisition#######
 ##Loading packages needed for this section
-
 library(geojsonio)
 library(sf)
 library(maps)
@@ -212,6 +212,7 @@ stats(dfRightJoin)
 
 world <- map_data("world")
 
+########Plotting############
 ##Plotting occurences of species onto a world map to visualize distribution
 
 ggplot() + geom_polygon(data = world, aes(x = long, y= lat, group = group), fill = "white", color = "black") +
@@ -221,7 +222,7 @@ ggplot() + geom_polygon(data = world, aes(x = long, y= lat, group = group), fill
 
 canada <- geojson_read("https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson", what = "sp")
 
-## Setting these as sf objects to use for plotting choropleth 
+## Setting geojson and joined data frame as sf objects to use for plotting choropleth 
 
 canada <- st_as_sf(canada, crs = 4326)
 species <- st_as_sf(dfRightJoin, coords = c("Longitude", "Latitude"), crs = 4326)
