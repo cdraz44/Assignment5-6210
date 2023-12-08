@@ -9,8 +9,12 @@ library(muscle)
 library(ggplot2)
 library(ggtree)
 library(Biostrings)
-library(msa)
 library(phytools)
+library(phangorn)
+library(msa)
+library(viridisLite)
+library(scico)
+library(igraph)
 
 SALMONIDAE_search <- entrez_search(db = "nuccore", term = ("Salmonidae[ORGN] AND CYTB[GENE] AND 1000:1200[SLEN]"), retmax = 1498, use_history = TRUE)
 
@@ -19,8 +23,6 @@ SALMONIDAE_search
 Salm_cytb <- entrez_fetch(db = "nuccore", web_history = SALMONIDAE_search$web_history, rettype = "fasta")
 
 class(Salm_cytb)
-
-head(Salm_cytb)
 
 write(Salm_cytb, "Salm_cytb.fasta", sep = "\n", )
 
@@ -44,27 +46,31 @@ names(df)
 
 summary(nchar(df$Salm_Sequence))
 
-hist(nchar(df$Salm_Sequence))
-
 filtered_df <- df %>%
  filter(!grepl("N+", df$Salm_Sequence))
 
+sum(str_count(filtered_df$Salm_Sequence, "-"))
+sum(str_count(filtered_df$Salm_Sequence, "N"))
 
 hist(nchar(filtered_df$Salm_Sequence))
 
+sequence_data <- filtered_df %>%
+  mutate(sequence_length = nchar(Salm_Sequence))
+
+ggplot(sequence_data, aes(x = sequence_length, fill = Species)) + geom_histogram(binwidth = 25, position = "dodge")+ labs( x = "Sequence Length", y = "Frequency, title = Sequence Length Distribution by Species") + scale_fill_discrete(name = "Species")
+       
 less_than_1100 <- filtered_df[nchar(filtered_df$Salm_Sequence) < 1100, ]
 
 more_than_1100 <- filtered_df[nchar(filtered_df$Salm_Sequence) > 1100, ]
 
 common_names <- intersect(less_than_1100$Species, more_than_1100$Species)
 
-
-hist(nchar(more_than_1100$Salm_Sequence))
+common_names 
 
 filtered_Salm <- filtered_df[nchar(df$Salm_Sequence) >= 1140, ]
-filtered_Salm <- filtered_Salm[nchar(filtered_Salm$Salm_Sequence) <= 1145, ]
+filtered_Salm <- filtered_Salm[nchar(filtered_Salm$Salm_Sequence) <= 1170, ]
 
-hist(nchar(filtered_Salm$Salm_Sequence))
+
 
 filtered_species <- filtered_Salm[!duplicated(filtered_Salm$Species), ]
 
@@ -73,25 +79,59 @@ cleaned_Salm <- na.omit(filtered_Salm)
 
 sum(is.na(cleaned_species))
 sum(is.na(cleaned_Salm))
+
 ##alignment and phylogeny creation using single species
 
 summary(cleaned_Salm)
 summary(cleaned_species)
 
+class(cleaned_Salm)
+class(cleaned_species)
+
 Salmstringset <- DNAStringSet(cleaned_species$Salm_Sequence)
 
 names(Salmstringset) <- cleaned_species$Species
+class(Salmstringset)
 
-Salmstringset
+Salm_alignment <- DNAStringSet(muscle::muscle(Salmstringset, quiet = TRUE, maxiters = 5, gapopen = -1000), use.names = TRUE)
 
-Salm_alignment <- AlignSeqs(Salmstringset)
-                                
-
-BrowseSeqs(Salm_alignment)
-
-AdjustAlignment(Salm_alignment, perfectMatch = 5, misMatch = 0, gapLetter = -3, gapOpening = -0.1, gapExtension = 0, substitutionMatrix = NULL, shiftPenalty = -0.2, threshold = 0.1, weight = 1, processors = 1)
+Salm_alignment
 
 BrowseSeqs(Salm_alignment)
 
-##Phylogeny creation 
+
+Salm_Bin <- as.DNAbin(Salm_alignment)
+Salm_Dist <- as.dist(Salm_Matrix)
+Salm_hclust <- hclust(dist(Salm_Dist))
+
+Salm_hclust
+
+plot(Salm_hclust)
+
+
+treeUPGMA = upgma(Salm_Dist)
+treeNJ = NJ(Salm_Dist)
+layout(matrix(c(1,2)))
+par(mar = c(.1,.1,.1,.1), nrow = 1)      
+plot(treeUPGMA, main="UPGMA")
+plot(treeNJ, "fan", main="NJ")
+
+treeUPGMA <- as.phylo(treeUPGMA)
+
+Salm_phydat <- as.phyDat(Salm_Bin)
+
+model_list <- c("JC", "F81", "K80", "HKY", "GTR")
+
+likelihoods <- sapply(model_list, function(model) { fit <- pml(Salm_Bin, tree, k = 4, model = model)
+-fit$logLik})
+
+class(tree)
+class(treeNJ)
+class(treeUPGMA)
+
+
+
+###CODING PT 2
+
+Salm_BOLD <- read_tsv("http://boldsystems.org/index.php/API_Public/combined?taxon=Salmonidae&format=tsv")
 
